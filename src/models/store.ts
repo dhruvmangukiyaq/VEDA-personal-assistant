@@ -12,8 +12,14 @@ export type Cfg = {
 };
 export type Timings = { stt: number; brain: number; tts: number; total: number };
 
+const _vedaApiEnv = process.env.NEXT_PUBLIC_VEDA_API;
+// "/" (or "") = same-origin on Vercel services; undefined = local dev default.
 export const API_BASE =
-  process.env.NEXT_PUBLIC_VEDA_API || "http://127.0.0.1:8000";
+  _vedaApiEnv === undefined || _vedaApiEnv === null
+    ? "http://127.0.0.1:8000"
+    : _vedaApiEnv === "" || _vedaApiEnv === "/"
+      ? ""
+      : _vedaApiEnv.replace(/\/$/, "");
 
 export const DEFAULT_CFG: Cfg = {
   cloud: false,
