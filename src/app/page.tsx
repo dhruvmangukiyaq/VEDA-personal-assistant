@@ -9,7 +9,8 @@ export default function Home() {
   const { status, chat, clock, handsFree, setHandsFree, micError, micState, typed, setTyped,
     confettiKey, showSettings, setShowSettings, cfg, setCfg, API_BASE, interim, streamText,
     timings, voices, chatOpen, setChatOpen, unread, setUnread, lastYou, lastVeda,
-    handleUserText, retryMic, introKey, setIntroKey, setChat, clearName } = v;
+    handleUserText, retryMic, introKey, setIntroKey, setChat, clearName,
+    unlocked, unlockAudio, testVoice } = v;
   return (
     <div className="relative flex h-screen w-screen flex-col overflow-hidden bg-[#05030f] text-slate-200">
       <SpaceDrift />
@@ -98,6 +99,7 @@ export default function Home() {
             <button onClick={() => { clearName(); setChat([]); }} className="flex-1 rounded-xl bg-white/10 py-2 text-[11px] font-bold hover:bg-white/20">Forget name</button>
             <button onClick={() => setChat([])} className="flex-1 rounded-xl bg-white/10 py-2 text-[11px] font-bold hover:bg-white/20">Clear chat</button>
           </div>
+          <button onClick={testVoice} className="mt-2 w-full rounded-xl bg-gradient-to-r from-cyan-300 to-fuchsia-400 py-2 text-[11px] font-black text-black">🔊 TEST VOICE — AVAAJ CHECK KARO</button>
           <button onClick={() => setIntroKey((k) => k + 1)} className="mt-2 w-full rounded-xl bg-white/10 py-2 text-[11px] font-bold hover:bg-white/20">✨ Replay sphere intro</button>
           <p className="mt-2 text-[10px] leading-relaxed text-slate-500">Backend off hoy to badhu offline brain par chalse.</p>
         </div>
@@ -109,6 +111,20 @@ export default function Home() {
           <div>STT {timings.stt}ms • BRAIN {timings.brain}ms • TTS {timings.tts}ms</div>
           <div className={timings.total <= 1500 ? "font-bold text-emerald-300" : "font-bold text-rose-300"}>
             FIRST AUDIO {timings.total}ms (target ≤1500ms)
+          </div>
+        </div>
+      )}
+
+      {/* FIRST-TAP voice unlock — mobile blocks all sound before a user gesture */}
+      {!unlocked && (
+        <div onClick={unlockAudio} className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-6 backdrop-blur-sm">
+          <div className="w-full max-w-sm rounded-3xl border border-fuchsia-300/30 bg-[#0a0618] p-6 text-center shadow-[0_0_60px_rgba(232,121,249,.35)]">
+            <div className="text-5xl">🔊</div>
+            <div className="mt-3 text-lg font-black text-white">TAP TO START VEDA</div>
+            <div className="mt-1 text-xs leading-relaxed text-slate-400">
+              Phone browser avaaj mate ek tap mange che.<br />Tap karo — pachhi Veda bolshe.
+            </div>
+            <button onClick={unlockAudio} className="mt-4 w-full rounded-2xl bg-gradient-to-r from-cyan-300 to-fuchsia-400 py-3 text-sm font-black text-black">🎙 START — AVAAJ CHALU KARO</button>
           </div>
         </div>
       )}

@@ -66,6 +66,7 @@ export function useVedaController() {
   const [streamText, setStreamText] = useState("");
   const [voices, setVoices] = useState<SpeechSynthesisVoice[]>([]);
   const [timings, setTimings] = useState<Timings | null>(null);
+  const [unlocked, setUnlocked] = useState(false); // first tap done → mobile may play sound
 
   const statusRef = useRef<Status>("idle");
   const handsFreeRef = useRef(true);
@@ -147,6 +148,10 @@ export function useVedaController() {
   const audioCtxRef = useRef<AudioContext | null>(null);
   const audioElRef = useRef<{ stop: () => void } | null>(null);
   const ttsReadyRef = useRef(false); // premium server voice available?
+  const resumeWatchRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const ttsStartedRef = useRef(false); // true once real audio actually started (mobile autoplay check)
+  const pendingGreetRef = useRef<{ text: string; lang: Lang } | null>(null);
+  const audioUnlockedRef = useRef(false); // true after first user tap (mobile needs a gesture for sound)
 
   const stopAllAudio = useCallback(() => {
     try { speechSynthesis.cancel(); } catch {}
@@ -155,21 +160,24 @@ export function useVedaController() {
     queueRef.current = [];
     speakingRef.current = false;
     if (speakTimer.current) clearInterval(speakTimer.current);
+    if (resumeWatchRef.current) clearInterval(resumeWatchRef.current);
     audioBus.ttsLevel = 0;
     setAudioLevel(0);
   }, []);
 
   const utterBrowser = useCallback((text: string, lang: Lang, onend: () => void) => {
-    const start = () => {
+    const startInner = () => {
       try {
         try { speechSynthesis.resume(); } catch {}
-        speechSynthesis.cancel();
+        try { speechSynthesis.cancel(); } catch {}
         const u = new SpeechSynthesisUtterance(text);
-        u.lang = REC_CODE[lang];
         const v = pickVoice(lang, cfgRef.current.voiceURI);
+        // voice+lang mismatch (e.g. gu-IN text on an en voice) = silent on Android → match them
+        u.lang = v ? v.lang : REC_CODE[lang];
         if (v) u.voice = v;
         u.rate = cfgRef.current.rate; u.pitch = 0.95;
         u.onstart = () => {
+          ttsStartedRef.current = true;
           setStatus("speaking");
           if (speakTimer.current) clearInterval(speakTimer.current);
           speakTimer.current = setInterval(() => {
@@ -177,6 +185,14 @@ export function useVedaController() {
             setAudioLevel(v2);
             audioBus.ttsLevel = Math.min(1, v2);
           }, 130);
+          // Android Chrome pauses long utterances (~15s bug) — keep it alive
+          if (resumeWatchRef.current) clearInterval(resumeWatchRef.current);
+          resumeWatchRef.current = setInterval(() => {
+            try {
+              if (speechSynthesis.paused) speechSynthesis.resume();
+              else if (speechSynthesis.speaking) speechSynthesis.resume();
+            } catch {}
+          }, 5000);
           if (!timeMarks.current.speakStart) {
             timeMarks.current.speakStart = performance.now();
             setTimings(computeTimings());
@@ -187,9 +203,24 @@ export function useVedaController() {
           const w = text.slice(e.charIndex, e.charIndex + (e.charLength || 5));
           audioBus.pulse(Math.min(0.8, 0.25 + w.length * 0.05));
         };
-        u.onend = onend;
-        u.onerror = onend;
+        const done = () => {
+          if (resumeWatchRef.current) clearInterval(resumeWatchRef.current);
+          onend();
+        };
+        u.onend = done;
+        u.onerror = done;
         speechSynthesis.speak(u);
+      } catch { onend(); }
+    };
+    const start = () => {
+      try {
+        try { speechSynthesis.resume(); } catch {}
+        // mobile Chrome: cancel() can leave the engine stuck in speaking=true with no
+        // sound and no onend — reset first, then speak on the next tick
+        if (speechSynthesis.speaking || speechSynthesis.pending) {
+          try { speechSynthesis.cancel(); } catch {}
+          setTimeout(startInner, 120);
+        } else startInner();
       } catch { onend(); }
     };
     try {
@@ -224,6 +255,7 @@ export function useVedaController() {
       let stopped = false;
       audioElRef.current = { stop: () => { stopped = true; try { src.stop(); } catch {} } };
       setStatus("speaking");
+      ttsStartedRef.current = true;
       if (!timeMarks.current.speakStart) {
         timeMarks.current.speakStart = performance.now();
         setTimings(computeTimings());
@@ -271,6 +303,41 @@ export function useVedaController() {
     }
     pumpQueue();
   }, [pumpQueue, stopAllAudio]);
+
+  // First user gesture: unlock mobile audio, replay greeting if it never sounded.
+  const unlockAudio = useCallback(() => {
+    audioUnlockedRef.current = true;
+    setUnlocked(true);
+    try { speechSynthesis.resume(); } catch {}
+    try { speechSynthesis.getVoices(); } catch {}
+    try { void audioCtxRef.current?.resume?.(); } catch {}
+    const g = pendingGreetRef.current;
+    if (g && !ttsStartedRef.current) {
+      pendingGreetRef.current = null;
+      stopAllAudio();
+      for (const s of splitSentences(cleanForSpeech(g.text))) {
+        if (s) queueRef.current.push({ text: s, lang: g.lang });
+      }
+      pumpQueue();
+    }
+  }, [pumpQueue, stopAllAudio]);
+
+  // Speaker check (settings button) — plays without polluting chat.
+  const testVoice = useCallback(() => {
+    unlockAudio();
+    try { speechSynthesis.cancel(); } catch {}
+    const lang = activeLangRef.current;
+    const samples: Record<Lang, string> = {
+      en: "Hello! I am Veda. Can you hear me clearly?",
+      hi: "Namaste! Main Veda hoon. Kya aap mujhe saaf sun sakte hain?",
+      gu: "Kem cho! Hu Veda chu. Shu tame mane saf sambhali shako cho?",
+    };
+    stopAllAudio();
+    for (const s of splitSentences(cleanForSpeech(samples[lang]))) {
+      if (s) queueRef.current.push({ text: s, lang });
+    }
+    pumpQueue();
+  }, [pumpQueue, stopAllAudio, unlockAudio]);
 
   const pendingNameRef = useRef(true);
 
@@ -630,11 +697,13 @@ export function useVedaController() {
     try { speechSynthesis.getVoices(); } catch {}
     const unlock = () => {
       if (blockedRef.current) { blockedRef.current = false; setMicError(""); }
+      unlockAudio();
       try { speechSynthesis.resume(); } catch {}
       listen();
     };
     window.addEventListener("pointerdown", unlock);
     window.addEventListener("keydown", unlock);
+    window.addEventListener("touchend", unlock);
     let saved = loadName();
     if (saved && isBadName(saved)) {
       clearNameValue();
@@ -672,10 +741,19 @@ export function useVedaController() {
       })();
     }
     const t2 = setTimeout(() => speak(greet[start], start), 1500);
+    // Mobile autoplay policy blocks sound before the first tap: if nothing actually
+    // started sounding, stash the greeting and replay it on the first tap instead.
+    const t3 = setTimeout(() => {
+      if (!ttsStartedRef.current && !audioUnlockedRef.current) {
+        pendingGreetRef.current = { text: greet[start], lang: start };
+      }
+    }, 3500);
     return () => {
       clearTimeout(t2);
+      clearTimeout(t3);
       window.removeEventListener("pointerdown", unlock);
       window.removeEventListener("keydown", unlock);
+      window.removeEventListener("touchend", unlock);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -717,5 +795,8 @@ export function useVedaController() {
     setChat,
     LANG_COLOR,
     clearName: clearNameValue,
+    unlocked,
+    unlockAudio,
+    testVoice,
   };
 }
