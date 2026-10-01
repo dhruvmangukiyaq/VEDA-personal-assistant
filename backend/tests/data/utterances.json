@@ -1,410 +1,450 @@
 [
-  {
-    "id": "fill-01",
-    "text": "ok",
-    "lang": "en",
-    "expect": "ignore",
-    "must_not_search": true,
-    "note": "Filler ack must never hit search"
-  },
-  {
-    "id": "fill-02",
-    "text": "okay",
-    "lang": "en",
-    "expect": "ignore",
-    "must_not_search": true
-  },
-  {
-    "id": "fill-03",
-    "text": "hmm",
-    "lang": "en",
-    "expect": "ignore",
-    "must_not_search": true
-  },
-  {
-    "id": "fill-04",
-    "text": "achha",
-    "lang": "hi-roman",
-    "expect": "ignore",
-    "must_not_search": true
-  },
-  {
-    "id": "fill-05",
-    "text": "haan",
-    "lang": "hi-roman",
-    "expect": "ignore",
-    "must_not_search": true
-  },
-  {
-    "id": "fill-06",
-    "text": "ha",
-    "lang": "gu-roman",
-    "expect": "ignore",
-    "must_not_search": true
-  },
-  {
-    "id": "fill-07",
-    "text": "saru",
-    "lang": "gu-roman",
-    "expect": "ignore",
-    "must_not_search": true
-  },
-  {
-    "id": "fill-08",
-    "text": "thanks",
-    "lang": "en",
-    "expect": "smalltalk",
-    "must_not_search": true
-  },
-  {
-    "id": "fill-09",
-    "text": "shukriya",
-    "lang": "hi-roman",
-    "expect": "smalltalk",
-    "must_not_search": true
-  },
-  {
-    "id": "fill-10",
-    "text": "aabhar",
-    "lang": "gu-roman",
-    "expect": "smalltalk",
-    "must_not_search": true
-  },
-  {
-    "id": "greet-01",
-    "text": "hello",
-    "lang": "en",
-    "expect": "smalltalk",
-    "must_not_search": true,
-    "note": "Must greet, never ask for name again if known"
-  },
-  {
-    "id": "greet-02",
-    "text": "hi",
-    "lang": "en",
-    "expect": "smalltalk",
-    "must_not_search": true
-  },
-  {
-    "id": "greet-03",
-    "text": "hey veda",
-    "lang": "en",
-    "expect": "smalltalk",
-    "must_not_search": true
-  },
-  {
-    "id": "greet-04",
-    "text": "namaste",
-    "lang": "hi",
-    "expect": "smalltalk",
-    "must_not_search": true
-  },
-  {
-    "id": "greet-05",
-    "text": "kem cho",
-    "lang": "gu-roman",
-    "expect": "smalltalk",
-    "must_not_search": true
-  },
-  {
-    "id": "greet-06",
-    "text": "good morning",
-    "lang": "en",
-    "expect": "smalltalk",
-    "must_not_search": true
-  },
-  {
-    "id": "greet-07",
-    "text": "kaise ho",
-    "lang": "hi-roman",
-    "expect": "smalltalk",
-    "must_not_search": true
-  },
-  {
-    "id": "name-01",
-    "text": "my name is Dhruv",
-    "lang": "en",
-    "expect": "action",
-    "must_not_search": true,
-    "note": "Save name, confirm once"
-  },
-  {
-    "id": "name-02",
-    "text": "mera naam Rahul hai",
-    "lang": "hi-roman",
-    "expect": "action",
-    "must_not_search": true
-  },
-  {
-    "id": "name-03",
-    "text": "maru naam Dhruv che",
-    "lang": "gu-roman",
-    "expect": "action",
-    "must_not_search": true
-  },
-  {
-    "id": "name-04",
-    "text": "what is my name",
-    "lang": "en",
-    "expect": "action",
-    "must_not_search": true
-  },
-  {
-    "id": "name-05",
-    "text": "forget my name",
-    "lang": "en",
-    "expect": "action",
-    "must_not_search": true
-  },
-  {
-    "id": "act-01",
-    "text": "what is the time",
-    "lang": "en",
-    "expect": "action",
-    "must_not_search": true
-  },
-  {
-    "id": "act-02",
-    "text": "samay kya hai",
-    "lang": "hi-roman",
-    "expect": "action",
-    "must_not_search": true
-  },
-  {
-    "id": "act-03",
-    "text": "atyare ketla vagya",
-    "lang": "gu-roman",
-    "expect": "action",
-    "must_not_search": true
-  },
-  {
-    "id": "act-04",
-    "text": "set a timer for 10 seconds",
-    "lang": "en",
-    "expect": "action",
-    "must_not_search": true
-  },
-  {
-    "id": "act-05",
-    "text": "open youtube",
-    "lang": "en",
-    "expect": "action",
-    "must_not_search": true
-  },
-  {
-    "id": "act-06",
-    "text": "what is 45 times 12",
-    "lang": "en",
-    "expect": "action",
-    "must_not_search": true
-  },
-  {
-    "id": "act-07",
-    "text": "tell me a joke",
-    "lang": "en",
-    "expect": "action",
-    "must_not_search": true
-  },
-  {
-    "id": "act-08",
-    "text": "weather in Ahmedabad",
-    "lang": "en",
-    "expect": "action",
-    "must_not_search": true
-  },
-  {
-    "id": "act-09",
-    "text": "Mumbai ka mausam kya hai",
-    "lang": "hi-roman",
-    "expect": "action",
-    "must_not_search": true
-  },
-  {
-    "id": "act-10",
-    "text": "meaning of serendipity",
-    "lang": "en",
-    "expect": "action",
-    "must_not_search": true
-  },
-  {
-    "id": "act-11",
-    "text": "remind me to call mom at 6pm",
-    "lang": "en",
-    "expect": "action",
-    "must_not_search": true
-  },
-  {
-    "id": "act-12",
-    "text": "remember that my birthday is 5th June",
-    "lang": "en",
-    "expect": "action",
-    "must_not_search": true
-  },
-  {
-    "id": "act-13",
-    "text": "what do you know about me",
-    "lang": "en",
-    "expect": "action",
-    "must_not_search": true
-  },
-  {
-    "id": "know-01",
-    "text": "who is Albert Einstein",
-    "lang": "en",
-    "expect": "knowledge",
-    "must_not_search": false
-  },
-  {
-    "id": "know-02",
-    "text": "what is a black hole",
-    "lang": "en",
-    "expect": "knowledge",
-    "must_not_search": false
-  },
-  {
-    "id": "know-03",
-    "text": "Taj Mahal kya hai",
-    "lang": "hi-roman",
-    "expect": "knowledge",
-    "must_not_search": false
-  },
-  {
-    "id": "know-04",
-    "text": "who is the prime minister of India",
-    "lang": "en",
-    "expect": "knowledge",
-    "must_not_search": false
-  },
-  {
-    "id": "know-05",
-    "text": "what is the capital of Gujarat",
-    "lang": "en",
-    "expect": "knowledge",
-    "must_not_search": false
-  },
-  {
-    "id": "noise-01",
-    "text": "uh hello umm",
-    "lang": "en-noisy",
-    "expect": "clarify",
-    "must_not_search": true,
-    "note": "Garbled speech must clarify, not search literally",
-    "confidence": 0.3
-  },
-  {
-    "id": "noise-02",
-    "text": "xyz abc weather",
-    "lang": "en-noisy",
-    "expect": "clarify",
-    "must_not_search": true,
-    "confidence": 0.3
-  },
-  {
-    "id": "noise-03",
-    "text": "a",
-    "lang": "en-noisy",
-    "expect": "clarify",
-    "must_not_search": true,
-    "confidence": 0.3
-  },
-  {
-    "id": "noise-04",
-    "text": "hmm what was that",
-    "lang": "en-noisy",
-    "expect": "clarify",
-    "must_not_search": true,
-    "confidence": 0.3
-  },
-  {
-    "id": "noise-05",
-    "text": "play uh that song",
-    "lang": "en-noisy",
-    "expect": "clarify",
-    "must_not_search": true,
-    "confidence": 0.3
-  },
-  {
-    "id": "mix-01",
-    "text": "time su che",
-    "lang": "gu-roman",
-    "expect": "action",
-    "must_not_search": true
-  },
-  {
-    "id": "mix-02",
-    "text": "ek joke sunao na",
-    "lang": "hi-roman",
-    "expect": "action",
-    "must_not_search": true
-  },
-  {
-    "id": "mix-03",
-    "text": "youtube kholo please",
-    "lang": "hi-roman",
-    "expect": "action",
-    "must_not_search": true
-  },
-  {
-    "id": "mix-04",
-    "text": "mara mate weather kaho Ahmedabad nu",
-    "lang": "gu-roman",
-    "expect": "action",
-    "must_not_search": true
-  },
-  {
-    "id": "mix-05",
-    "text": "hello kem cho veda",
-    "lang": "gu-roman",
-    "expect": "smalltalk",
-    "must_not_search": true
-  },
-  {
-    "id": "mix-06",
-    "text": "tum kahan se ho",
-    "lang": "hi-roman",
-    "expect": "smalltalk",
-    "must_not_search": true
-  },
-  {
-    "id": "mix-07",
-    "text": "tame kon cho",
-    "lang": "gu-roman",
-    "expect": "smalltalk",
-    "must_not_search": true
-  },
-  {
-    "id": "small-01",
-    "text": "how are you",
-    "lang": "en",
-    "expect": "smalltalk",
-    "must_not_search": true
-  },
-  {
-    "id": "small-02",
-    "text": "who are you",
-    "lang": "en",
-    "expect": "smalltalk",
-    "must_not_search": true
-  },
-  {
-    "id": "small-03",
-    "text": "thank you so much",
-    "lang": "en",
-    "expect": "smalltalk",
-    "must_not_search": true
-  },
-  {
-    "id": "small-04",
-    "text": "bye see you later",
-    "lang": "en",
-    "expect": "smalltalk",
-    "must_not_search": true
-  },
-  {
-    "id": "small-05",
-    "text": "what can you do",
-    "lang": "en",
-    "expect": "smalltalk",
-    "must_not_search": true
-  }
+ {
+  "id": "fill-01",
+  "text": "ok",
+  "lang": "en",
+  "expect": "ignore",
+  "must_not_search": true,
+  "note": "Filler ack must never hit search"
+ },
+ {
+  "id": "fill-02",
+  "text": "okay",
+  "lang": "en",
+  "expect": "ignore",
+  "must_not_search": true
+ },
+ {
+  "id": "fill-03",
+  "text": "hmm",
+  "lang": "en",
+  "expect": "ignore",
+  "must_not_search": true
+ },
+ {
+  "id": "fill-04",
+  "text": "achha",
+  "lang": "hi-roman",
+  "expect": "ignore",
+  "must_not_search": true
+ },
+ {
+  "id": "fill-05",
+  "text": "haan",
+  "lang": "hi-roman",
+  "expect": "ignore",
+  "must_not_search": true
+ },
+ {
+  "id": "fill-06",
+  "text": "ha",
+  "lang": "gu-roman",
+  "expect": "ignore",
+  "must_not_search": true
+ },
+ {
+  "id": "fill-07",
+  "text": "saru",
+  "lang": "gu-roman",
+  "expect": "ignore",
+  "must_not_search": true
+ },
+ {
+  "id": "fill-08",
+  "text": "thanks",
+  "lang": "en",
+  "expect": "smalltalk",
+  "must_not_search": true
+ },
+ {
+  "id": "fill-09",
+  "text": "shukriya",
+  "lang": "hi-roman",
+  "expect": "smalltalk",
+  "must_not_search": true
+ },
+ {
+  "id": "fill-10",
+  "text": "aabhar",
+  "lang": "gu-roman",
+  "expect": "smalltalk",
+  "must_not_search": true
+ },
+ {
+  "id": "greet-01",
+  "text": "hello",
+  "lang": "en",
+  "expect": "smalltalk",
+  "must_not_search": true,
+  "note": "Must greet, never ask for name again if known"
+ },
+ {
+  "id": "greet-02",
+  "text": "hi",
+  "lang": "en",
+  "expect": "smalltalk",
+  "must_not_search": true
+ },
+ {
+  "id": "greet-03",
+  "text": "hey veda",
+  "lang": "en",
+  "expect": "smalltalk",
+  "must_not_search": true
+ },
+ {
+  "id": "greet-04",
+  "text": "namaste",
+  "lang": "hi",
+  "expect": "smalltalk",
+  "must_not_search": true
+ },
+ {
+  "id": "greet-05",
+  "text": "kem cho",
+  "lang": "gu-roman",
+  "expect": "smalltalk",
+  "must_not_search": true
+ },
+ {
+  "id": "greet-06",
+  "text": "good morning",
+  "lang": "en",
+  "expect": "smalltalk",
+  "must_not_search": true
+ },
+ {
+  "id": "greet-07",
+  "text": "kaise ho",
+  "lang": "hi-roman",
+  "expect": "smalltalk",
+  "must_not_search": true
+ },
+ {
+  "id": "name-01",
+  "text": "my name is Dhruv",
+  "lang": "en",
+  "expect": "action",
+  "must_not_search": true,
+  "note": "Save name, confirm once"
+ },
+ {
+  "id": "name-02",
+  "text": "mera naam Rahul hai",
+  "lang": "hi-roman",
+  "expect": "action",
+  "must_not_search": true
+ },
+ {
+  "id": "name-03",
+  "text": "maru naam Dhruv che",
+  "lang": "gu-roman",
+  "expect": "action",
+  "must_not_search": true
+ },
+ {
+  "id": "name-04",
+  "text": "what is my name",
+  "lang": "en",
+  "expect": "action",
+  "must_not_search": true
+ },
+ {
+  "id": "name-05",
+  "text": "forget my name",
+  "lang": "en",
+  "expect": "action",
+  "must_not_search": true
+ },
+ {
+  "id": "act-01",
+  "text": "what is the time",
+  "lang": "en",
+  "expect": "action",
+  "must_not_search": true
+ },
+ {
+  "id": "act-02",
+  "text": "samay kya hai",
+  "lang": "hi-roman",
+  "expect": "action",
+  "must_not_search": true
+ },
+ {
+  "id": "act-03",
+  "text": "atyare ketla vagya",
+  "lang": "gu-roman",
+  "expect": "action",
+  "must_not_search": true
+ },
+ {
+  "id": "act-04",
+  "text": "set a timer for 10 seconds",
+  "lang": "en",
+  "expect": "action",
+  "must_not_search": true
+ },
+ {
+  "id": "act-05",
+  "text": "open youtube",
+  "lang": "en",
+  "expect": "action",
+  "must_not_search": true
+ },
+ {
+  "id": "act-06",
+  "text": "what is 45 times 12",
+  "lang": "en",
+  "expect": "action",
+  "must_not_search": true
+ },
+ {
+  "id": "act-07",
+  "text": "tell me a joke",
+  "lang": "en",
+  "expect": "action",
+  "must_not_search": true
+ },
+ {
+  "id": "act-08",
+  "text": "weather in Ahmedabad",
+  "lang": "en",
+  "expect": "action",
+  "must_not_search": true
+ },
+ {
+  "id": "act-09",
+  "text": "Mumbai ka mausam kya hai",
+  "lang": "hi-roman",
+  "expect": "action",
+  "must_not_search": true
+ },
+ {
+  "id": "act-10",
+  "text": "meaning of serendipity",
+  "lang": "en",
+  "expect": "action",
+  "must_not_search": true
+ },
+ {
+  "id": "act-11",
+  "text": "remind me to call mom at 6pm",
+  "lang": "en",
+  "expect": "action",
+  "must_not_search": true
+ },
+ {
+  "id": "act-12",
+  "text": "remember that my birthday is 5th June",
+  "lang": "en",
+  "expect": "action",
+  "must_not_search": true
+ },
+ {
+  "id": "act-13",
+  "text": "what do you know about me",
+  "lang": "en",
+  "expect": "action",
+  "must_not_search": true
+ },
+ {
+  "id": "know-01",
+  "text": "who is Albert Einstein",
+  "lang": "en",
+  "expect": "knowledge",
+  "must_not_search": false
+ },
+ {
+  "id": "know-02",
+  "text": "what is a black hole",
+  "lang": "en",
+  "expect": "knowledge",
+  "must_not_search": false
+ },
+ {
+  "id": "know-03",
+  "text": "Taj Mahal kya hai",
+  "lang": "hi-roman",
+  "expect": "knowledge",
+  "must_not_search": false
+ },
+ {
+  "id": "know-04",
+  "text": "who is the prime minister of India",
+  "lang": "en",
+  "expect": "knowledge",
+  "must_not_search": false
+ },
+ {
+  "id": "know-05",
+  "text": "what is the capital of Gujarat",
+  "lang": "en",
+  "expect": "knowledge",
+  "must_not_search": false
+ },
+ {
+  "id": "noise-01",
+  "text": "uh hello umm",
+  "lang": "en-noisy",
+  "expect": "clarify",
+  "must_not_search": true,
+  "note": "Garbled speech must clarify, not search literally",
+  "confidence": 0.3
+ },
+ {
+  "id": "noise-02",
+  "text": "xyz abc weather",
+  "lang": "en-noisy",
+  "expect": "clarify",
+  "must_not_search": true,
+  "confidence": 0.3
+ },
+ {
+  "id": "noise-03",
+  "text": "a",
+  "lang": "en-noisy",
+  "expect": "clarify",
+  "must_not_search": true,
+  "confidence": 0.3
+ },
+ {
+  "id": "noise-04",
+  "text": "hmm what was that",
+  "lang": "en-noisy",
+  "expect": "clarify",
+  "must_not_search": true,
+  "confidence": 0.3
+ },
+ {
+  "id": "noise-05",
+  "text": "play uh that song",
+  "lang": "en-noisy",
+  "expect": "clarify",
+  "must_not_search": true,
+  "confidence": 0.3
+ },
+ {
+  "id": "mix-01",
+  "text": "time su che",
+  "lang": "gu-roman",
+  "expect": "action",
+  "must_not_search": true
+ },
+ {
+  "id": "mix-02",
+  "text": "ek joke sunao na",
+  "lang": "hi-roman",
+  "expect": "action",
+  "must_not_search": true
+ },
+ {
+  "id": "mix-03",
+  "text": "youtube kholo please",
+  "lang": "hi-roman",
+  "expect": "action",
+  "must_not_search": true
+ },
+ {
+  "id": "mix-04",
+  "text": "mara mate weather kaho Ahmedabad nu",
+  "lang": "gu-roman",
+  "expect": "action",
+  "must_not_search": true
+ },
+ {
+  "id": "mix-05",
+  "text": "hello kem cho veda",
+  "lang": "gu-roman",
+  "expect": "smalltalk",
+  "must_not_search": true
+ },
+ {
+  "id": "mix-06",
+  "text": "tum kahan se ho",
+  "lang": "hi-roman",
+  "expect": "smalltalk",
+  "must_not_search": true
+ },
+ {
+  "id": "mix-07",
+  "text": "tame kon cho",
+  "lang": "gu-roman",
+  "expect": "smalltalk",
+  "must_not_search": true
+ },
+ {
+  "id": "small-01",
+  "text": "how are you",
+  "lang": "en",
+  "expect": "smalltalk",
+  "must_not_search": true
+ },
+ {
+  "id": "small-02",
+  "text": "who are you",
+  "lang": "en",
+  "expect": "smalltalk",
+  "must_not_search": true
+ },
+ {
+  "id": "small-03",
+  "text": "thank you so much",
+  "lang": "en",
+  "expect": "smalltalk",
+  "must_not_search": true
+ },
+ {
+  "id": "small-04",
+  "text": "bye see you later",
+  "lang": "en",
+  "expect": "smalltalk",
+  "must_not_search": true
+ },
+ {
+  "id": "small-05",
+  "text": "what can you do",
+  "lang": "en",
+  "expect": "smalltalk",
+  "must_not_search": true
+ },
+ {
+  "id": "fuzz-01",
+  "text": "ketla wagya che",
+  "lang": "gu-roman",
+  "expect": "action",
+  "must_not_search": true,
+  "note": "STT garble vagya->wagya must still tell time"
+ },
+ {
+  "id": "fuzz-02",
+  "text": "ek mazaak sunao",
+  "lang": "hi-roman",
+  "expect": "action",
+  "must_not_search": true,
+  "note": "STT garble majak->mazaak must still joke"
+ },
+ {
+  "id": "fuzz-03",
+  "text": "tane kone banavyu",
+  "lang": "gu-roman",
+  "expect": "smalltalk",
+  "must_not_search": true,
+  "note": "maker question must be smalltalk"
+ },
+ {
+  "id": "fuzz-04",
+  "text": "tame shu kari shako",
+  "lang": "gu-roman",
+  "expect": "smalltalk",
+  "must_not_search": true,
+  "note": "capabilities must be smalltalk"
+ },
+ {
+  "id": "fuzz-05",
+  "text": "wether in paris",
+  "lang": "en",
+  "expect": "action",
+  "must_not_search": true,
+  "note": "STT garble weather->wether must still try weather tool"
+ }
 ]

@@ -10,7 +10,7 @@ export default function Home() {
     confettiKey, showSettings, setShowSettings, cfg, setCfg, API_BASE, interim, streamText,
     timings, voices, chatOpen, setChatOpen, unread, setUnread, lastYou, lastVeda,
     handleUserText, retryMic, introKey, setIntroKey, setChat, clearName,
-    unlocked, unlockAudio, testVoice } = v;
+    unlocked, unlockAudio, testVoice, apiOk } = v;
   return (
     <div className="relative flex h-screen w-screen flex-col overflow-hidden bg-[#05030f] text-slate-200">
       <SpaceDrift />
@@ -66,7 +66,12 @@ export default function Home() {
           </button>
           <div className="mb-3 rounded-xl border border-white/10 bg-black/50 px-3 py-2 text-[11px] text-slate-400">
             API: <span className="font-mono text-slate-200">{API_BASE}</span><br />
-            Key server na <span className="font-mono">backend/.env</span> ma — browser ma key nathi.
+            {cfg.cloud
+              ? (apiOk === null ? "⏳ backend check thay che…"
+                : apiOk ? "● BACKEND ONLINE — smart javab malse"
+                : "○ BACKEND OFFLINE — Vercel ma NEXT_PUBLIC_VEDA_API=/ ane OPENROUTER_API_KEY set karo, nahi to offline brain javab apse")
+              : "📴 offline brain — smart javab mate BACKEND ON karo"}
+            <br />Key server na <span className="font-mono">backend/.env</span> ma — browser ma key nathi.
           </div>
           <label className="mb-1 block text-[11px] text-slate-400">Voice speed: {cfg.rate.toFixed(2)}x</label>
           <input type="range" min={0.8} max={1.5} step={0.05} value={cfg.rate}

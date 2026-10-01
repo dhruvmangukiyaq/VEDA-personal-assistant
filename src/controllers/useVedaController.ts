@@ -1,7 +1,7 @@
 "use client";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { audioBus, pumpAnalyser } from "@/lib/audioBus";
-import { getVedaReply, tryLocalAction, detectLang, timerDoneText, isBadName, type Lang } from "@/models/vedaBrain";
+import { getVedaReply, tryLocalAction, detectLang, timerDoneText, isBadName, isRepeatAsk, isStopAsk, langSwitchAsk, type Lang } from "@/models/vedaBrain";
 import { API_BASE, DEFAULT_CFG, loadCfg, loadChat, loadName, saveNameValue, clearNameValue, type Cfg, type Msg, type Status, type Timings } from "@/models/store";
 
 
@@ -67,6 +67,7 @@ export function useVedaController() {
   const [voices, setVoices] = useState<SpeechSynthesisVoice[]>([]);
   const [timings, setTimings] = useState<Timings | null>(null);
   const [unlocked, setUnlocked] = useState(false); // first tap done → mobile may play sound
+  const [apiOk, setApiOk] = useState<boolean | null>(null); // backend reachable?
 
   const statusRef = useRef<Status>("idle");
   const handsFreeRef = useRef(true);
@@ -111,6 +112,20 @@ export function useVedaController() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [chat]);
 
+  const pingBackend = useCallback(async () => {
+    try {
+      const ctrl = new AbortController();
+      const t = setTimeout(() => ctrl.abort(), 6000);
+      const r = await fetch(`${API_BASE}/health`, { signal: ctrl.signal });
+      clearTimeout(t);
+      setApiOk(r.ok);
+    } catch { setApiOk(false); }
+  }, []);
+
+  useEffect(() => {
+    if (cfg.cloud) pingBackend();
+  }, [cfg.cloud, pingBackend]);
+
   useEffect(() => {
     const id = setInterval(() =>
       setClock(new Date().toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit" })), 1000);
@@ -125,6 +140,8 @@ export function useVedaController() {
     };
     loadVoices();
     try { speechSynthesis.onvoiceschanged = loadVoices; } catch {}
+    // backend reachability (drives the ONLINE/OFFLINE badge in settings)
+    pingBackend();
     // pre-warm backend (faster first answer) + check premium TTS
     fetch(`${API_BASE}/health`).catch(() => {});
     fetch(`${API_BASE}/api/tts/status`).then((r) => r.json()).then((d) => {
@@ -366,9 +383,50 @@ export function useVedaController() {
     setTimeout(() => speak(reply[lang], lang), 250);
   }, [speak]);
 
-  const handleUserText = useCallback(async (text: string) => {
+  const handleUserText = useCallback(async (text: string, conf = 1) => {
     if (!text.trim()) return;
     setChat((c) => [...c, { from: "you", text }]);
+    // "stop / bas karo" — cut speech immediately
+    if (isStopAsk(text)) {
+      stopAllAudio();
+      setStatus("idle");
+      restartLoop(900);
+      return;
+    }
+    // "fari kaho / repeat" — replay last Veda reply without re-asking the brain
+    if (isRepeatAsk(text)) {
+      const lang = activeLangRef.current;
+      const lv = [...chatRef.current].reverse().find((m) => m.from === "veda");
+      if (lv?.text) {
+        stopAllAudio();
+        for (const s of splitSentences(cleanForSpeech(lv.text))) {
+          if (s) queueRef.current.push({ text: s, lang: lv.lang || lang });
+        }
+        pumpQueue();
+      } else {
+        const miss: Record<Lang, string> = {
+          en: "There is nothing to repeat yet. Ask me something first.",
+          hi: "Abhi dohrane ke liye kuch nahi hai. Pehle kuch poochhiye.",
+          gu: "Hamna farithi kaheva jevu kai nathi. Pehla kai puchho.",
+        };
+        setStatus("idle");
+        setTimeout(() => speak(miss[lang], lang), 250);
+      }
+      return;
+    }
+    // "hindi ma bol" — switch reply language
+    const sw = langSwitchAsk(text);
+    if (sw) {
+      setActiveLang(sw); activeLangRef.current = sw;
+      const ok: Record<Lang, string> = {
+        en: "Done. From now on I will speak English.",
+        hi: "Ho gaya. Ab se main Hindi mein bolunga.",
+        gu: "Thai gayu. Have thi hu Gujarati ma bolis.",
+      };
+      setStatus("idle");
+      setTimeout(() => speak(ok[sw], sw), 250);
+      return;
+    }
     setStatus("thinking");
     const lower = text.toLowerCase();
     // forget saved name
@@ -419,6 +477,19 @@ export function useVedaController() {
         }
         setStatus("idle");
         setTimeout(() => speak(quick.text, quick.lang), 250);
+        return;
+      }
+      // garbled mic input (low STT confidence, no local match) → ask again, don't search garbage
+      if (conf < 0.45) {
+        const lang = activeLangRef.current;
+        const heard = text.length > 60 ? text.slice(0, 60) + "…" : text;
+        const askAgain: Record<Lang, string> = {
+          en: `I heard something like '${heard}'. Could you say it once more, a little slowly?`,
+          hi: `Mujhe '${heard}' jaisa kuch sunai diya. Kripya ek baar phir se, thoda dheere kahiye?`,
+          gu: `Mane '${heard}' jevu kai sambhlayu. Krupaya ek vaar fari, thodu dhire kaho?`,
+        };
+        setStatus("idle");
+        setTimeout(() => speak(askAgain[lang], lang), 250);
         return;
       }
       // 2) backend brain (FastAPI router + tools + cloud LLM) — key stays on server
@@ -572,7 +643,7 @@ export function useVedaController() {
       setStatus("idle");
       speak("Sorry, something went wrong. Please ask again.", "en");
     }
-  }, [speak]);
+  }, [speak, pumpQueue, stopAllAudio]);
 
   const listen = useCallback(() => {
     if (blockedRef.current || !handsFreeRef.current) return;
@@ -595,8 +666,11 @@ export function useVedaController() {
       rec.onresult = (e: any) => {
         let interimTxt = "";
         let finalTxt = "";
+        let confSum = 0, confN = 0;
         for (let i = e.resultIndex; i < e.results.length; i++) {
           const t = e.results[i][0].transcript as string;
+          const cf = e.results[i][0]?.confidence;
+          if (typeof cf === "number" && cf > 0) { confSum += cf; confN++; }
           if (e.results[i].isFinal) finalTxt += t;
           else interimTxt += t;
         }
@@ -617,7 +691,7 @@ export function useVedaController() {
         const tooSoon = Date.now() - speakEndRef.current < 1500;
         if (echo || (dup && tooSoon)) { restartLoop(900); return; }
         lastHeardRef.current = clean;
-        handleUserText(clean);
+        handleUserText(clean, confN ? confSum / confN : 1);
       };
       rec.onerror = (e: any) => {
         listeningRef.current = false;
@@ -798,5 +872,6 @@ export function useVedaController() {
     unlocked,
     unlockAudio,
     testVoice,
+    apiOk,
   };
 }

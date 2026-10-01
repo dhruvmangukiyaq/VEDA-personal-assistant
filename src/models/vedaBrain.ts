@@ -18,6 +18,84 @@ export function detectLang(text: string): Lang {
   return "en";
 }
 
+// ---- STT-tolerant fuzzy matching: phone mics garble words ("vagya"→"wagya") ----
+function editDist(a: string, b: string): number {
+  const m = a.length, n = b.length;
+  if (Math.abs(m - n) > 2) return 99;
+  const dp: number[] = Array.from({ length: n + 1 }, (_, j) => j);
+  for (let i = 1; i <= m; i++) {
+    let prev = dp[0];
+    dp[0] = i;
+    for (let j = 1; j <= n; j++) {
+      const t = dp[j];
+      dp[j] = Math.min(dp[j] + 1, dp[j - 1] + 1, prev + (a[i - 1] === b[j - 1] ? 0 : 1));
+      prev = t;
+    }
+  }
+  return dp[n];
+}
+
+/** true if any word equals (or closely resembles) any key. Exact for short words, ≤2 edits for long. */
+export function fuzzyHas(s: string, keys: string[]): boolean {
+  const words = s.toLowerCase().split(/[^a-z\u0900-\u097F\u0A80-\u0AFF]+/).filter(Boolean);
+  for (const w of words) {
+    for (const k of keys) {
+      if (w === k) return true;
+      if (w.length >= 4 && k.length >= 4) {
+        const maxD = k.length >= 6 ? 2 : 1;
+        if (Math.abs(w.length - k.length) <= maxD && editDist(w, k) <= maxD) return true;
+      }
+    }
+  }
+  return false;
+}
+
+// intent vocabularies (include common STT mishearings)
+const V_HELLO = ["hello", "helo", "hallo", "namaste", "namaskar", "kemcho", "sasriyakal"];
+const V_RU = ["kemcho", "kemchho", "majama", "kaise", "kaisi", "kese"];
+const V_WHO = ["kaun", "kaon"];
+const V_THANKS = ["thanks", "thankyou", "thanku", "shukriya", "dhanyavad", "aabhar"];
+const V_BYE = ["bye", "goodbye", "alvida", "avjo", "goodnight"];
+const V_TIME = ["time", "taim", "samay", "vagya", "vagye", "baje", "ketla", "kitne", "clock"];
+const V_DATE = ["date", "today", "tarikh", "tareekh", "aaj", "aaje"];
+const V_JOKE = ["joke", "jok", "funny", "chutkula", "majak", "mazak", "hassavu", "hasavo", "laugh"];
+const V_WEATHER = ["weather", "wether", "mausam", "mosam", "havaman", "havaman", "temperature", "barish", "varsad", "thandi", "garmi"];
+const V_OPENVERB = ["open", "khol", "kholo", "kholu", "kol"];
+const V_HELP = ["help", "madad", "abilities", "features", "feature"];
+const V_MAKER = ["banavyu", "banaya", "banai", "creator", "developer", "malik", "owner"];
+const CITY_STOP = new Set(["weather", "wether", "mausam", "mosam", "havaman", "havaman", "kaho", "batao", "bataiye", "kya", "hai", "che", "nu", "ka", "ki", "ke", "ne", "ma", "mein", "in", "today", "tomorrow", "now", "outside", "karo", "kem", "shu", "temperature", "ketlu", "ketla", "current", "ahal"]);
+
+/** loose city guess for garbled weather queries ("ahmedabad nu havaman" without "ma") */
+function guessCity(s: string): string {
+  const words = s.toLowerCase().split(/[^a-z\u0900-\u097F\u0A80-\u0AFF]+/).filter(Boolean)
+    .filter((w) => w.length >= 4 && !CITY_STOP.has(w) && !V_WEATHER.includes(w));
+  if (!words.length) return "";
+  words.sort((a, b) => b.length - a.length);
+  return words[0];
+}
+
+export function isRepeatAsk(s: string): boolean {
+  const t = s.toLowerCase();
+  return fuzzyHas(t, ["repeat", "again"]) ||
+    /(fari kaho|feri kaho|say again|once more|phir se|ek vaar|ek bar|vapas bol|fari bol|dobara kaho)/.test(t);
+}
+
+export function isStopAsk(s: string): boolean {
+  const t = s.toLowerCase();
+  return fuzzyHas(t, ["stop", "chup", "shant", "shaant"]) ||
+    /(bas karo|ruk ja|stop karo|bolvanu bandh|bolna band|quiet|thak gaya|enough)/.test(t);
+}
+
+/** returns target language if the user asks to switch spoken language, else null */
+export function langSwitchAsk(s: string): Lang | null {
+  const t = ` ${s.toLowerCase()} `;
+  if (!/(bol|bolo|speak|bhasha|language)/.test(t)) return null;
+  if (t.includes("gujarat") || t.includes("gujrati") || t.includes("gujju")) return "gu";
+  if (t.includes("hindi")) return "hi";
+  if (t.includes("english") || t.includes("angrezi")) return "en";
+  return null;
+}
+
 const JOKES: Record<Lang, string[]> = {
   en: [
     "Why do programmers prefer dark mode? Because light attracts bugs.",
@@ -90,6 +168,16 @@ const T = {
     en: (n: string) => `I am Veda, your AI agent, ${n}. Ask me anything: time, calculations, weather in any city, word meanings, jokes, facts, timers, websites, or knowledge questions like: who is Albert Einstein.`,
     hi: (n: string) => `Main Veda hoon, aapka AI agent, ${n}. Mujhse kuch bhi poochhiye: samay, hisaab, kisi bhi sheher ka mausam, shabd ka arth, chutkule, tathya, timer, website, ya gyaan ke sawaal.`,
     gu: (n: string) => `Hu Veda chu, tamaro AI agent, ${n}. Mane kai pan puchho: samay, hisab, koi pan shaher nu havaman, shabd no arth, joke, hakeekat, timer, website ke gnyan na saval.`,
+  },
+  abilities: {
+    en: (n: string) => `I can do a lot, ${n}: tell the time and date, calculate, check weather in any city, define words, open websites, set timers, crack jokes, and answer knowledge questions. Just speak!`,
+    hi: (n: string) => `Main bahut kuch kar sakta hoon, ${n}: samay aur tarikh, hisaab, kisi bhi sheher ka mausam, shabd ka arth, website kholna, timer, chutkule aur gyaan ke sawaal. Bas boliye!`,
+    gu: (n: string) => `Hu ghano badhu kari shaku chu, ${n}: samay ane tarikh, hisab, koi pan shaher nu havaman, shabd no arth, website kholvi, timer, joke ane gnyan na saval. Bas bolo!`,
+  },
+  maker: {
+    en: (n: string) => `I was built by Dhruv, ${n} — your personal voice assistant, living right inside this app.`,
+    hi: (n: string) => `Mujhe Dhruv ne banaya hai, ${n} — aapka niji voice assistant, isi app ke andar rehta hoon.`,
+    gu: (n: string) => `Mane Dhruv e banavyo che, ${n} — tamaro niji voice assistant, aa app ni andar j rahu chu.`,
   },
   time: {
     en: (n: string, v: string) => `The current time is ${v}, ${n}.`,
@@ -323,23 +411,25 @@ export function tryLocalAction(input: string): BrainReply | null {
     const saved = getName();
     return { text: saved ? T.nameKnown[lang](saved) : T.nameUnknown[lang], lang };
   }
-  if (/^(hi|hello|hey|namaste|नमस्ते|kem cho|kemcho|કેમ છો|कैसे हो|kaise ho)\b/.test(s) || s.includes("hello veda") || s === "hi")
+  if (/^(hi|hello|hey|namaste|नमस्ते|kem cho|kemcho|કેમ છો|कैसे हो|kaise ho)\b/.test(s) || s.includes("hello veda") || s === "hi" || fuzzyHas(s, V_HELLO))
     return { text: T.hello[lang](n), lang };
-  if (/(how are you|how r u|kaise ho|kaisi ho|कैसे हो|kem cho|kem chho|કેમ છો|majama|मजे में)/.test(s))
+  if (/(how are you|how r u|kaise ho|kaisi ho|कैसे हो|kem cho|kem chho|કેમ છો|majama|मजे में)/.test(s) || fuzzyHas(s, V_RU))
     return { text: T.howareyou[lang](n), lang };
-  if (/(who are you|your name|tum kaun|तुम कौन|tame kon|તમે કોણ)/.test(s))
+  if (/(who are you|your name|tum kaun|तुम कौन|tame kon|તમે કોણ)/.test(s) || fuzzyHas(s, V_WHO))
     return { text: T.whoami[lang](), lang };
-  if (/(thank|shukriya|dhanyavad|धन्यवाद|aabhar|આભાર)/.test(s))
+  if (fuzzyHas(s, V_MAKER) || /(who made you|kisne banaya|kone banavyu|tane kone|who created you|tumhe kisne banaya)/.test(s))
+    return { text: T.maker[lang](n), lang };
+  if (/(thank|shukriya|dhanyavad|धन्यवाद|aabhar|આભાર)/.test(s) || fuzzyHas(s, V_THANKS))
     return { text: T.thanks[lang](n), lang };
-  if (/(bye|good night|goodnight|see you|shutdown|alvida|अलविदा|avjo|આવજો)/.test(s))
+  if (/(bye|good night|goodnight|see you|shutdown|alvida|अलविदा|avjo|આવજો)/.test(s) || fuzzyHas(s, V_BYE))
     return { text: T.bye[lang](n), lang };
-  if (/(help|what can you do|madad|मदद|madad karo|help karo)/.test(s))
-    return { text: T.help[lang](n), lang };
+  if (/(help|what can you do|madad|मदद|madad karo|help karo)/.test(s) || /(kari shako|kar sakte|sakti|can you do|abilities|features|tame shu)/.test(s) || fuzzyHas(s, V_HELP))
+    return { text: T.abilities[lang](n), lang };
   if (/(where are you from|tum kahan se|तुम कहाँ से|tame kya na|તમે ક્યાંના|where do you live)/.test(s))
     return { text: T.whereFrom[lang](n), lang };
-  if (/(time|samay|समय|vagya|वाजे|સમય|ketla vagya|kitne baje)/.test(s) && !s.includes("timer"))
+  if (!s.includes("timer") && (/(time|samay|समय|vagya|वाजे|સમય|ketla vagya|kitne baje)/.test(s) || fuzzyHas(s, V_TIME)))
     return { text: T.time[lang](n, new Date().toLocaleTimeString(locale, { hour: "numeric", minute: "2-digit" })), lang };
-  if (/(date|today|tarikh|तारीख|aaj|आज|aaje|આજે)/.test(s))
+  if (/(date|today|tarikh|तारीख|aaj|आज|aaje|આજે)/.test(s) || fuzzyHas(s, V_DATE))
     return { text: T.date[lang](n, new Date().toLocaleDateString(locale, { weekday: "long", month: "long", day: "numeric" })), lang };
   const timerMatch = s.match(/timer.*?(\d+)\s*(second|minute|hour|सेकंड|सेकेण्ड|मिनट|घंटा|second|sekand|મિનિટ|કલાક)/);
   if (s.includes("timer") && timerMatch) {
@@ -351,7 +441,7 @@ export function tryLocalAction(input: string): BrainReply | null {
       return { text: T.timer[lang](n, label), lang, timerSeconds: secs };
     }
   }
-  if (/(joke|funny|make me laugh|chutkula|चुटकुला|hassavu|मजाक|majak|majaak|જોક|મજાક)/.test(s))
+  if (/(joke|funny|make me laugh|chutkula|चुटकुला|hassavu|मजाक|majak|majaak|જોક|મજાક)/.test(s) || fuzzyHas(s, V_JOKE))
     return { text: JOKES[lang][Math.floor(Math.random() * JOKES[lang].length)], lang, fun: true };
   if (/(fact|interesting|rochak|रोचक|hakeekat|હકીકત|gyan|ज्ञान|જ્ઞાન)/.test(s))
     return { text: FACTS[lang][Math.floor(Math.random() * FACTS[lang].length)], lang };
@@ -363,7 +453,7 @@ export function tryLocalAction(input: string): BrainReply | null {
     }
   }
   for (const [k, url] of Object.entries(SITES)) {
-    if (s.includes(`open ${k}`) || s === k || (s.includes(k) && /(open|khol|खोल|ખોલ)/.test(s)))
+    if (s.includes(`open ${k}`) || s === k || (s.includes(k) && (/(open|khol|खोल|ખોલ)/.test(s) || fuzzyHas(s, V_OPENVERB))))
       return { text: T.open[lang](n, k), lang, action: url };
   }
   const openMatch = s.match(/open\s+([a-z0-9.-]+\.[a-z]{2,})/);
@@ -418,9 +508,9 @@ export async function getVedaReply(input: string, forceLang?: Lang): Promise<Bra
     return { text: T.whereFrom[lang](n), lang };
 
   // time / date
-  if (/(time|samay|समय|vagya|वाजे|સમય|ketla vagya|kitne baje)/.test(s) && !s.includes("timer"))
+  if (!s.includes("timer") && (/(time|samay|समय|vagya|वाजे|સમય|ketla vagya|kitne baje)/.test(s) || fuzzyHas(s, V_TIME)))
     return { text: T.time[lang](n, new Date().toLocaleTimeString(locale, { hour: "numeric", minute: "2-digit" })), lang };
-  if (/(date|today|tarikh|तारीख|aaj|आज|aaje|આજે)/.test(s))
+  if (/(date|today|tarikh|तारीख|aaj|आज|aaje|આજે)/.test(s) || fuzzyHas(s, V_DATE))
     return { text: T.date[lang](n, new Date().toLocaleDateString(locale, { weekday: "long", month: "long", day: "numeric" })), lang };
 
   // timer
@@ -436,7 +526,7 @@ export async function getVedaReply(input: string, forceLang?: Lang): Promise<Bra
   }
 
   // jokes / facts
-  if (/(joke|funny|make me laugh|chutkula|चुटकुला|hassavu|मजाक|majak|majaak|જોક|મજાક)/.test(s))
+  if (/(joke|funny|make me laugh|chutkula|चुटकुला|hassavu|मजाक|majak|majaak|જોક|મજાક)/.test(s) || fuzzyHas(s, V_JOKE))
     return { text: JOKES[lang][Math.floor(Math.random() * JOKES[lang].length)], lang, fun: true };
   if (/(fact|interesting|rochak|रोचक|hakeekat|હકીકત|gyan|ज्ञान|જ્ઞાન)/.test(s))
     return { text: FACTS[lang][Math.floor(Math.random() * FACTS[lang].length)], lang };
@@ -452,7 +542,7 @@ export async function getVedaReply(input: string, forceLang?: Lang): Promise<Bra
 
   // open sites
   for (const [k, url] of Object.entries(SITES)) {
-    if (s.includes(`open ${k}`) || s === k || (s.includes(k) && /(open|khol|खोल|ખોલ)/.test(s)))
+    if (s.includes(`open ${k}`) || s === k || (s.includes(k) && (/(open|khol|खोल|ખોલ)/.test(s) || fuzzyHas(s, V_OPENVERB))))
       return { text: T.open[lang](n, k), lang, action: url };
   }
   const openMatch = s.match(/open\s+([a-z0-9.-]+\.[a-z]{2,})/);
@@ -468,6 +558,20 @@ export async function getVedaReply(input: string, forceLang?: Lang): Promise<Bra
   if (wMatch) {
     const wres = await weatherNow(wMatch[1], lang);
     if (wres) return { text: wres, lang };
+  }
+  // garbled weather ask ("ahmedabad nu havaman", "wether in paris")
+  if (fuzzyHas(s, V_WEATHER)) {
+    const city = guessCity(s);
+    if (city) {
+      const wres = await weatherNow(city, lang);
+      if (wres) return { text: wres, lang };
+    }
+    const askCity: Record<Lang, string> = {
+      en: `Which city, ${n}? Say: weather in Ahmedabad.`,
+      hi: `Kaun se sheher ka mausam, ${n}? Kahiye: Ahmedabad ka mausam.`,
+      gu: `Kya shaher nu havaman, ${n}? Kaho: Ahmedabad nu havaman.`,
+    };
+    return { text: askCity[lang], lang };
   }
 
   // dictionary — "meaning of serendipity"
