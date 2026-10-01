@@ -1,36 +1,130 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# VEDA — Personal Voice Assistant
 
-## Getting Started
+Hands-free, trilingual (English / Hindi / Gujarati) voice assistant in the
+browser. Speak naturally — Veda detects your language and answers in it —
+with a real-time particle-sphere visual that reacts to your voice.
 
-First, run the development server:
+- 🎙️ **Hands-free voice loop** — mic → speech → reply, no buttons needed
+- 🗣️ **Same-language replies** — English, Hindi (Devanagari + roman),
+  Gujarati (script + roman), auto-detected per utterance
+- 🧠 **Two brains** — instant offline brain + FastAPI backend
+  (LLM router with function calling, streaming)
+- 🔥 **Plasma sphere** — 30k GPU particles, voice-reactive, space backdrop
+- 💬 **Chat widget** — transcript, type fallback, unread badge
+- 🎊 Jokes trigger confetti. Obviously.
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+## Architecture (MVC)
+
+```
+VEDA personal assistant/
+├── src/
+│   ├── app/page.tsx          # VIEW — JSX only, thin binding
+│   ├── views/                # VIEW — ParticleSphere, SpaceDrift
+│   ├── controllers/          # CONTROLLER — useVedaController (voice pipeline)
+│   ├── models/              # MODEL — vedaBrain, store (types/API/storage)
+│   └── lib/                  # shared utils (audioBus)
+├── backend/app/
+│   ├── controllers/          # HTTP only (chat, audio, memory, tools)
+│   ├── services/             # brain (router/llm/tools), tts
+│   ├── models/               # pydantic schemas
+│   └── main.py               # FastAPI entrypoint
+└── scripts/                  # headless screenshot / verify harnesses
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Frontend (Next.js) owns the voice loop and renders state.
+Backend (FastAPI) owns the LLM router, tools, and secrets.
+Rule: **no API keys in the frontend** — keys live in `backend/.env` only.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Quick start
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+Requirements: Node 20+, Python 3.9+ (3.11 recommended), Chrome (mic + voices).
 
-## Learn More
+```bash
+# 1) web UI
+npm install
+npm run dev            # → http://127.0.0.1:3000
 
-To learn more about Next.js, take a look at the following resources:
+# 2) backend brain (second terminal)
+cd backend
+pip install -r requirements.txt
+cp .env.example .env   # then add your key (below)
+python -m uvicorn app.main:app --host 127.0.0.1 --port 8000
+```
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+Open the page, allow the microphone, just speak.
+In ⚙ settings, turn **BACKEND ON** to use the server brain
+(LLM + tools + streaming); OFF = fully offline brain.
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+## Environment (`backend/.env`)
 
-## Deploy on Vercel
+| Key | Needed for | Default |
+|---|---|---|
+| `LLM_PROVIDER` | `openrouter` or `gemini-direct` | `openrouter` |
+| `OPENROUTER_API_KEY` | cloud brain via OpenRouter | — |
+| `LLM_MODEL` | chat model id | `google/gemini-3.5-flash-lite` |
+| `TTS_PROVIDER` / `TTS_API_KEY` | premium voice (`elevenlabs`/`openai`) | browser voice |
+| `DATABASE_URL` | memory DB (M4) | sqlite file |
+| `CORS_ORIGINS` | allowed web origins | localhost:3000 |
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+## Voice pipeline
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+```
+mic → Web Speech STT (en-US/hi-IN/gu-IN, interim captions)
+  → echo-guard (ignores Veda hearing herself) + confidence clarify
+  → brain: local actions → backend SSE stream → offline fallback
+  → sentence-queue TTS (browser voice or /api/tts mp3) → audioBus levels → sphere
+```
+
+First audio target ≤ 1.5 s: instant local actions (~ms),
+streamed first sentence, "One moment." ack on slow calls.
+⚙ → **Debug ON** shows live STT/BRAIN/TTS timings.
+
+## Tools (backend plugins)
+
+Each tool: name + JSON schema + timeout + permission
+(`read`/`write`/`confirm`), every call logged to
+`backend/logs/tool_calls.jsonl`. v1: `get_time`, `calculate`,
+`tell_joke`, `web_search` (DuckDuckGo + Wikipedia),
+`get_weather` (Open-Meteo), `define_word`.
+
+**Add a tool:** implement `async def _x(args)` in
+`backend/app/services/brain/tools/builtin.py` and `register(Tool(...))`
+— the LLM picks it up automatically via the schema.
+
+## Testing
+
+```bash
+python -m pytest backend/tests -q            # 26 pass (offline-safe)
+VEDA_LIVE_TESTS=1 python -m pytest backend/tests/test_llm_live.py -q  # real key, tiny spend
+npm run build                                  # frontend type-check + build
+node scripts/shot.mjs /tmp/shots               # headless stage screenshot
+node scripts/frames.mjs                         # motion check (2 frames, pixel diff)
+node scripts/verify-center.mjs                  # centering @ DSF 1+2
+```
+
+`backend/tests/data/utterances.json` holds 55 regression utterances
+(filler, greetings, noise, Hinglish/Gujlish…) — `test_router.py`
+asserts none of them ever hit raw web search.
+
+## Docker / CI
+
+```bash
+docker compose up --build   # api :8000 + web :3000 (needs backend/.env)
+```
+`.github/workflows/ci.yml` runs pytest + `npm run build` on push/PR.
+
+## Troubleshooting
+
+| Symptom | Fix |
+|---|---|
+| Sphere off-center / cropped | Hard-refresh; fixed by canvas CSS-size fix — see `ParticleSphere.tsx` resize block |
+| Mic banner / no listening | Use **Chrome** (Safari has no SpeechRecognition), Allow mic, RETRY MIC |
+| Greeting repeats / "Hello Hello" | Name got saved as "Hello" — say **"forget my name"** |
+| Backend brain silent | API running? `curl localhost:8000/health`; ⚙ BACKEND ON? |
+| Hydration "1 Issue" badge | Fixed by client-only store hydration; hard-refresh (Cmd+Shift+R) |
+
+## Roadmap
+
+M3 voice upgrades (wake-word, barge-in) · M4 persistent memory DB ·
+M5 reminders/notes/calendar · M6 Google OAuth + confirmations ·
+M7 auth/hardening · M8 deploy docs.

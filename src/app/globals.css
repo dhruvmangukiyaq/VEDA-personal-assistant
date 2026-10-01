@@ -20,7 +20,21 @@
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
+  background: #05030f;
+  color: #e2e8f0;
   font-family: Arial, Helvetica, sans-serif;
+  margin: 0;
+  overflow: hidden;
 }
+
+/* floating aurora blobs */
+.aurora { position: fixed; border-radius: 9999px; filter: blur(90px); opacity: .35; pointer-events: none; z-index: 0; }
+.aurora.a1 { width: 480px; height: 480px; left: -140px; top: -140px; background: #0ea5e9; animation: drift1 14s ease-in-out infinite alternate; }
+.aurora.a2 { width: 520px; height: 520px; right: -160px; top: 20%; background: #d946ef; animation: drift2 18s ease-in-out infinite alternate; }
+.aurora.a3 { width: 420px; height: 420px; left: 30%; bottom: -180px; background: #22c55e; opacity: .22; animation: drift1 20s ease-in-out infinite alternate-reverse; }
+@keyframes drift1 { from { transform: translate(0,0) scale(1); } to { transform: translate(60px,40px) scale(1.15); } }
+@keyframes drift2 { from { transform: translate(0,0) scale(1.1); } to { transform: translate(-70px,-30px) scale(.95); } }
+
+/* confetti burst */
+.confetti { position: absolute; top: -12px; width: 8px; height: 14px; border-radius: 2px; animation: fall 1.8s ease-in forwards; }
+@keyframes fall { to { transform: translateY(105vh) rotate(720deg); opacity: 0; } }
