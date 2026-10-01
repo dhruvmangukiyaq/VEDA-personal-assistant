@@ -446,5 +446,29 @@
   "expect": "action",
   "must_not_search": true,
   "note": "STT garble weather->wether must still try weather tool"
+ },
+ {
+  "id": "ord-01",
+  "text": "What's the weather like today",
+  "lang": "en",
+  "expect": "clarify",
+  "must_not_search": true,
+  "note": "weather Q with today must NOT answer date; no city so ask city"
+ },
+ {
+  "id": "ord-02",
+  "text": "Will it rain today in Paris",
+  "lang": "en",
+  "expect": "action",
+  "must_not_search": true,
+  "note": "rain+city must hit weather tool, not date"
+ },
+ {
+  "id": "ord-03",
+  "text": "What is today's date",
+  "lang": "en",
+  "expect": "action",
+  "must_not_search": true,
+  "note": "real date Q must still answer date"
  }
 ]

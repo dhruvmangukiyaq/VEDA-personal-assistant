@@ -59,11 +59,17 @@ const V_BYE = ["bye", "goodbye", "alvida", "avjo", "goodnight"];
 const V_TIME = ["time", "taim", "samay", "vagya", "vagye", "baje", "ketla", "kitne", "clock"];
 const V_DATE = ["date", "today", "tarikh", "tareekh", "aaj", "aaje"];
 const V_JOKE = ["joke", "jok", "funny", "chutkula", "majak", "mazak", "hassavu", "hasavo", "laugh"];
-const V_WEATHER = ["weather", "wether", "mausam", "mosam", "havaman", "havaman", "temperature", "barish", "varsad", "thandi", "garmi"];
+const V_WEATHER = ["weather", "wether", "mausam", "mosam", "havaman", "havaman", "temperature", "barish", "varsad", "thandi", "garmi", "rain", "rainy", "raining", "snow", "storm", "stormy", "cloudy", "sunny", "windy", "humid"];
 const V_OPENVERB = ["open", "khol", "kholo", "kholu", "kol"];
 const V_HELP = ["help", "madad", "abilities", "features", "feature"];
 const V_MAKER = ["banavyu", "banaya", "banai", "creator", "developer", "malik", "owner"];
-const CITY_STOP = new Set(["weather", "wether", "mausam", "mosam", "havaman", "havaman", "kaho", "batao", "bataiye", "kya", "hai", "che", "nu", "ka", "ki", "ke", "ne", "ma", "mein", "in", "today", "tomorrow", "now", "outside", "karo", "kem", "shu", "temperature", "ketlu", "ketla", "current", "ahal"]);
+const CITY_STOP = new Set(["weather", "wether", "mausam", "mosam", "havaman", "havaman", "kaho", "batao", "bataiye", "kya", "hai", "che", "nu", "ka", "ki", "ke", "ne", "ma", "mein", "in", "today", "tomorrow", "now", "outside", "karo", "kem", "shu", "temperature", "ketlu", "ketla", "current", "ahal", "what", "like", "will", "with", "tell", "know"]);
+
+/** weather intent? checked BEFORE date — "what's the weather like today" has "today" but is weather, not date */
+export function isWeatherAsk(s: string): boolean {
+  const t = s.toLowerCase();
+  return /(weather|wether|mausam|mosam|havaman|barish|varsad|rain|raining|rainy|snow|storm|cloudy|sunny|temperature)/.test(t) || fuzzyHas(t, V_WEATHER);
+}
 
 /** loose city guess for garbled weather queries ("ahmedabad nu havaman" without "ma") */
 function guessCity(s: string): string {
@@ -429,7 +435,7 @@ export function tryLocalAction(input: string): BrainReply | null {
     return { text: T.whereFrom[lang](n), lang };
   if (!s.includes("timer") && (/(time|samay|समय|vagya|वाजे|સમય|ketla vagya|kitne baje)/.test(s) || fuzzyHas(s, V_TIME)))
     return { text: T.time[lang](n, new Date().toLocaleTimeString(locale, { hour: "numeric", minute: "2-digit" })), lang };
-  if (/(date|today|tarikh|तारीख|aaj|आज|aaje|આજે)/.test(s) || fuzzyHas(s, V_DATE))
+  if (!isWeatherAsk(s) && (/(date|today|tarikh|तारीख|aaj|आज|aaje|આજે)/.test(s) || fuzzyHas(s, V_DATE)))
     return { text: T.date[lang](n, new Date().toLocaleDateString(locale, { weekday: "long", month: "long", day: "numeric" })), lang };
   const timerMatch = s.match(/timer.*?(\d+)\s*(second|minute|hour|सेकंड|सेकेण्ड|मिनट|घंटा|second|sekand|મિનિટ|કલાક)/);
   if (s.includes("timer") && timerMatch) {
@@ -510,7 +516,7 @@ export async function getVedaReply(input: string, forceLang?: Lang): Promise<Bra
   // time / date
   if (!s.includes("timer") && (/(time|samay|समय|vagya|वाजे|સમય|ketla vagya|kitne baje)/.test(s) || fuzzyHas(s, V_TIME)))
     return { text: T.time[lang](n, new Date().toLocaleTimeString(locale, { hour: "numeric", minute: "2-digit" })), lang };
-  if (/(date|today|tarikh|तारीख|aaj|आज|aaje|આજે)/.test(s) || fuzzyHas(s, V_DATE))
+  if (!isWeatherAsk(s) && (/(date|today|tarikh|तारीख|aaj|आज|aaje|આજે)/.test(s) || fuzzyHas(s, V_DATE)))
     return { text: T.date[lang](n, new Date().toLocaleDateString(locale, { weekday: "long", month: "long", day: "numeric" })), lang };
 
   // timer
@@ -554,7 +560,7 @@ export async function getVedaReply(input: string, forceLang?: Lang): Promise<Bra
     return { text: T.open[lang](n, "music"), lang, action: "https://music.youtube.com" };
 
   // live weather — "weather in Ahmedabad"
-  const wMatch = s.match(/(?:weather|mausam|मौसम|havaman|હવામાન)[^.?!]*?(?:in|mein|में|ma|मां|માં)\s+([a-z\u0900-\u097F\u0A80-\u0AFF ]+)/);
+  const wMatch = s.match(/(?:weather|wether|mausam|mosam|havaman|barish|varsad|rain|मौसम|હવામાન)[^.?!]*?(?:in|mein|में|ma|मां|માં)\s+([a-z\u0900-\u097F\u0A80-\u0AFF ]+)/);
   if (wMatch) {
     const wres = await weatherNow(wMatch[1], lang);
     if (wres) return { text: wres, lang };

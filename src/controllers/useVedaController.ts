@@ -538,7 +538,7 @@ export function useVedaController() {
           let buf = "", pending = "", full = "";
           let meta: {
             kind: string; lang: Lang; action?: string;
-            fun?: boolean; silent?: boolean; profile_update?: { name?: string | null };
+            fun?: boolean; silent?: boolean; reply?: string; profile_update?: { name?: string | null };
           } | null = null;
           for (;;) {
             const { done: rd, value } = await reader.read();
@@ -553,7 +553,7 @@ export function useVedaController() {
                 t?: string;
                 done?: {
                   kind: string; lang: Lang; action?: string; fun?: boolean;
-                  silent?: boolean; profile_update?: { name?: string | null };
+                  silent?: boolean; reply?: string; profile_update?: { name?: string | null };
                 };
               };
               if (typeof ev.t === "string" && ev.t) {
@@ -607,6 +607,14 @@ export function useVedaController() {
           if (!timeMarks.current.firstToken) {
             timeMarks.current.firstToken = performance.now();
             setTimings(computeTimings());
+          }
+          // backend fast-path replies (time/joke/smalltalk/clarify) arrive as done-only,
+          // with no stream tokens — speak + log them instead of dropping silently
+          const doneReply = (meta.reply || "").trim();
+          if (doneReply && !full.trim()) {
+            setChat((cc) => [...cc, { from: "veda", text: doneReply, lang }]);
+            lastSpokenRef.current = doneReply;
+            speakSentence(doneReply, lang);
           }
           if (full.trim()) {
             setChat((cc) => [...cc, { from: "veda", text: full.trim(), lang }]);

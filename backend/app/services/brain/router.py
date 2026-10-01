@@ -130,16 +130,24 @@ V_BYE = ["bye", "goodbye", "alvida", "avjo", "goodnight"]
 V_TIME = ["time", "taim", "samay", "vagya", "vagye", "baje", "ketla", "kitne", "clock"]
 V_DATE = ["date", "today", "tarikh", "tareekh", "aaj", "aaje"]
 V_JOKE = ["joke", "jok", "funny", "chutkula", "majak", "mazak", "hassavu", "hasavo", "laugh"]
-V_WEATHER = ["weather", "wether", "mausam", "mosam", "havaman", "havaman", "temperature", "barish", "varsad", "thandi", "garmi"]
+V_WEATHER = ["weather", "wether", "mausam", "mosam", "havaman", "havaman", "temperature", "barish", "varsad", "thandi", "garmi",
+             "rain", "rainy", "raining", "snow", "storm", "stormy", "cloudy", "sunny", "windy", "humid"]
 V_OPENVERB = ["open", "khol", "kholo", "kholu", "kol", "kolo"]
 V_HELP = ["help", "madad", "abilities", "features", "feature"]
 V_MAKER = ["banavyu", "banaya", "banai", "creator", "developer", "malik", "owner"]
 
 
+def _is_weather(s: str, words: List[str]) -> bool:
+    """Weather intent? Checked BEFORE date — "what's the weather like today" is weather, not date."""
+    return bool(re.search(r"weather|wether|mausam|mosam|havaman|barish|varsad|rain|snow|storm|cloud|temperatur", s)) \
+        or _fuzzy_has(words, V_WEATHER)
+
+
 def _guess_city(s: str, words: List[str]) -> Optional[str]:
     """Loose city guess for garbled weather queries ("ahmedabad nu havaman")."""
     stop = _CITY_STOP | {"in", "mein", "men", "ma", "maa", "par", "no", "nu", "wether",
-                         "mosam", "kahe", "kahevay", "batao", "kaho", "temperature"}
+                         "mosam", "kahe", "kahevay", "batao", "kaho", "temperature",
+                         "what", "like", "will", "with", "tell", "know"}
     cands = [w for w in words if len(w) >= 4 and w not in V_WEATHER and w not in stop]
     return max(cands, key=len) if cands else None
 
@@ -150,13 +158,13 @@ _CITY_STOP = {"weather", "mausam", "havaman", "kaho", "batao", "kya", "hai",
 
 
 def _weather_city(s: str) -> Optional[str]:
-    m = re.search(r"(?:weather|mausam|havaman)[^.?!]*?(?:in|mein|ma)\s+([a-z ]+)", s)
+    m = re.search(r"(?:weather|wether|mausam|havaman|rain|barish)[^.?!]*?(?:in|mein|ma)\s+([a-z ]+)", s)
     if m:
         return m.group(1).strip()
-    m = re.search(r"([a-z\u0900-\u097F\u0A80-\u0AFF ]+?)\s+ka\s+(?:mausam|weather)", s)
+    m = re.search(r"([a-z\u0900-\u097F\u0A80-\u0AFF ]+?)\s+ka\s+(?:mausam|weather|rain)", s)
     if m:
         return m.group(1).strip().split()[-1]
-    kw = re.search(r"(?:weather|mausam|havaman)\b(.*)", s)
+    kw = re.search(r"(?:weather|wether|mausam|havaman|rain|barish)\b(.*)", s)
     if kw:
         cands = [w for w in re.findall(r"[a-z]{4,}", kw.group(1)) if w not in _CITY_STOP]
         if cands:
@@ -238,7 +246,7 @@ async def fast_path(
     if "timer" not in s and (re.search(r"\btime\b|samay|vagya|kitne baje", s) or _fuzzy_has(words, V_TIME)):
         out = await tools_base.run_tool("get_time", {})
         return RouteResult("action", f"{out} {name}.".replace(" .", "."), lg, tool_calls=["get_time"])
-    if re.search(r"\bdate\b|today|tarikh|aaj|aaje", s) or _fuzzy_has(words, V_DATE):
+    if (re.search(r"\bdate\b|today|tarikh|aaj|aaje", s) or _fuzzy_has(words, V_DATE)) and not _is_weather(s, words):
         out = await tools_base.run_tool("get_time", {})
         return RouteResult("action", out, lg, tool_calls=["get_time"])
     tm = re.search(r"timer.*?(\d+)\s*(second|minute|hour)", s)
