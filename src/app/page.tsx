@@ -1,16 +1,16 @@
 "use client";
 import ParticleSphere from "@/views/ParticleSphere";
 import SpaceDrift from "@/views/SpaceDrift";
-import { useVedaController, LANG_COLOR } from "@/controllers/useVedaController";
+import { useVedaController } from "@/controllers/useVedaController";
 import type { Cfg } from "@/models/store";
 
 export default function Home() {
   const v = useVedaController();
-  const { status, chat, clock, handsFree, setHandsFree, micError, micState, typed, setTyped,
-    confettiKey, showSettings, setShowSettings, cfg, setCfg, API_BASE, interim, streamText,
-    timings, voices, chatOpen, setChatOpen, unread, setUnread, lastYou, lastVeda,
+  const { status, chat, handsFree, setHandsFree, micState, typed, setTyped,
+    confettiKey, showSettings, setShowSettings, cfg, setCfg, API_BASE,
+    timings, voices, chatOpen, setChatOpen, unread, setUnread,
     handleUserText, retryMic, introKey, setIntroKey, setChat, clearName,
-    unlocked, unlockAudio, testVoice, apiOk } = v;
+    testVoice, apiOk } = v;
   return (
     <div className="relative flex h-screen w-screen flex-col overflow-hidden bg-[#05030f] text-slate-200">
       <SpaceDrift />
@@ -30,27 +30,7 @@ export default function Home() {
         </div>
       )}
 
-      {/* TOP BAR */}
-      <header className="z-10 flex flex-wrap items-center justify-between gap-2 border-b border-white/10 bg-black/40 px-5 py-3 backdrop-blur-xl">
-        <div className="flex items-center gap-3">
-          <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-gradient-to-br from-fuchsia-400 via-cyan-300 to-emerald-300 font-black text-black shadow-[0_0_30px_#e879f9]">V</div>
-          <div>
-            <div className="bg-gradient-to-r from-cyan-200 via-fuchsia-200 to-amber-200 bg-clip-text text-sm font-black tracking-[0.3em] text-transparent">VEDA VOICE CORE</div>
-            <div className="text-[10px] tracking-widest text-slate-400">JUST SPEAK • I REPLY</div>
-          </div>
-        </div>
-        <div className="flex items-center gap-3">
-          <span className="font-mono text-sm text-white">{clock}</span>
-          <span className={`rounded-full border px-3 py-1 text-[10px] font-black tracking-widest ${cfg.cloud ? "border-fuchsia-300/50 bg-fuchsia-400/15 text-fuchsia-200" : "border-white/10 bg-white/5 text-slate-400"}`}>
-            {cfg.cloud ? "☁ BACKEND BRAIN" : "📴 LOCAL BRAIN"}
-          </span>
-          <span className="flex items-center gap-2 rounded-full border border-white/10 bg-black/50 px-3 py-1 text-[11px] font-bold">
-            <span className={`h-2 w-2 rounded-full ${status === "speaking" ? "bg-amber-400" : status === "listening" ? "bg-rose-500 animate-pulse" : status === "thinking" ? "bg-violet-400 animate-pulse" : "bg-emerald-400"}`} />
-            {status.toUpperCase()}
-          </span>
-          <button onClick={() => setShowSettings(!showSettings)} className="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-sm hover:bg-white/15">⚙</button>
-        </div>
-      </header>
+      {/* TOP BAR — removed: fullscreen sphere mode (git history ma safe che) */}
 
       {/* SETTINGS DRAWER */}
       {showSettings && (
@@ -120,27 +100,14 @@ export default function Home() {
         </div>
       )}
 
-      {/* FIRST-TAP voice unlock — mobile blocks all sound before a user gesture */}
-      {!unlocked && (
-        <div onClick={unlockAudio} className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-6 backdrop-blur-sm">
-          <div className="w-full max-w-sm rounded-3xl border border-fuchsia-300/30 bg-[#0a0618] p-6 text-center shadow-[0_0_60px_rgba(232,121,249,.35)]">
-            <div className="text-5xl">🔊</div>
-            <div className="mt-3 text-lg font-black text-white">TAP TO START VEDA</div>
-            <div className="mt-1 text-xs leading-relaxed text-slate-400">
-              Phone browser avaaj mate ek tap mange che.<br />Tap karo — pachhi Veda bolshe.
-            </div>
-            <button onClick={unlockAudio} className="mt-4 w-full rounded-2xl bg-gradient-to-r from-cyan-300 to-fuchsia-400 py-3 text-sm font-black text-black">🎙 START — AVAAJ CHALU KARO</button>
-          </div>
-        </div>
-      )}
+      {/* FIRST-TAP voice unlock overlay — removed: fullscreen mode, silent auto-unlock on first gesture */}
 
-      {/* MAIN STAGE */}
-      <main className="z-10 grid flex-1 grid-cols-1 gap-4 overflow-hidden p-4">
-        <section id="stage" className="relative flex min-h-[420px] flex-col overflow-hidden rounded-[2rem] border border-fuchsia-300/20 bg-black/60 shadow-[0_0_90px_rgba(232,121,249,.18)]">
+      {/* MAIN STAGE — fullscreen sphere */}
+      <main className="z-10 flex flex-1 overflow-hidden p-0">
+        <section id="stage" className="relative flex flex-1 flex-col overflow-hidden bg-black/60">
           <div className="absolute inset-0">
             <ParticleSphere state={status === "thinking" ? "thinking" : status === "speaking" ? "speaking" : status === "listening" ? "listening" : "idle"} introKey={introKey} />
           </div>
-          <div className="pointer-events-none absolute left-5 top-4 text-[10px] tracking-[0.3em] text-white/60">PLASMA SPHERE</div>
 
           {/* mic help banner — only when voice can't start */}
           {(micState === "denied" || micState === "unsupported") && (
@@ -158,26 +125,7 @@ export default function Home() {
             </div>
           )}
 
-          {/* live captions */}
-          <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black via-black/70 to-transparent p-6 pt-16 text-center">
-            <div>
-              <div className="flex items-center justify-center gap-2 text-xs font-black tracking-[0.3em]">
-                <span className={`h-2.5 w-2.5 rounded-full ${status === "listening" ? "bg-rose-500 animate-ping" : status === "speaking" || status === "thinking" ? "bg-amber-400 animate-pulse" : "bg-emerald-400"}`} />
-                <span className="text-white">
-                  {status === "listening" ? "LISTENING — SPEAK NOW" : status === "speaking" ? "VEDA SPEAKING…" : status === "thinking" ? "THINKING…" : "LIVE • JUST SPEAK!"}
-                </span>
-              </div>
-              {micError && <div className="mt-2 text-xs font-bold text-rose-400">{micError}</div>}
-              {lastYou && <div className="mx-auto mt-3 max-w-xl rounded-2xl border border-white/10 bg-black/60 px-4 py-2 text-base font-bold text-white">“{lastYou.text}”</div>}
-              {status === "listening" && interim && (
-                <div className="mx-auto mt-2 max-w-xl text-sm italic text-cyan-200/80">“{interim}…”</div>
-              )}
-              {streamText && (
-                <div className="mx-auto mt-2 max-w-xl text-sm text-slate-200"><span className="font-black text-fuchsia-300">VEDA: </span>{streamText}</div>
-              )}
-              {lastVeda && <div className="mx-auto mt-2 max-w-xl text-sm text-slate-200"><span className="font-black" style={{ color: LANG_COLOR[lastVeda.lang || "en"] }}>VEDA: </span>{lastVeda.text}</div>}
-            </div>
-          </div>
+          {/* live captions — removed: fullscreen sphere mode (git history ma safe che) */}
         </section>
 
         {/* FLOATING CHAT WIDGET */}

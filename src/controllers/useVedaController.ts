@@ -66,7 +66,7 @@ export function useVedaController() {
   const [streamText, setStreamText] = useState("");
   const [voices, setVoices] = useState<SpeechSynthesisVoice[]>([]);
   const [timings, setTimings] = useState<Timings | null>(null);
-  const [unlocked, setUnlocked] = useState(false); // first tap done → mobile may play sound
+  const [unlocked, setUnlocked] = useState(true); // unlock overlay removed — silent auto-unlock on first gesture
   const [apiOk, setApiOk] = useState<boolean | null>(null); // backend reachable?
 
   const statusRef = useRef<Status>("idle");
