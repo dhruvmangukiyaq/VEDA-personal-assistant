@@ -170,6 +170,35 @@ export function useVedaController() {
   const pendingGreetRef = useRef<{ text: string; lang: Lang } | null>(null);
   const audioUnlockedRef = useRef(false); // true after first user tap (mobile needs a gesture for sound)
 
+  // Mobile: AudioContext MUST be created + resumed inside a user gesture,
+  // otherwise it stays "suspended" and backend TTS is silent.
+  const ensureAudioCtx = useCallback(async () => {
+    try {
+      const AC = window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
+      if (!AC) return null;
+      if (!audioCtxRef.current) {
+        try { audioCtxRef.current = new AC({ latencyHint: "interactive" } as AudioContextOptions); }
+        catch { audioCtxRef.current = new AC(); }
+      }
+      const actx = audioCtxRef.current;
+      try {
+        if (actx.state === "suspended") await actx.resume();
+      } catch {}
+      // iOS silent-buffer trick: play 1 sample of silence to fully unlock
+      try {
+        if (actx.state === "running" && !(ensureAudioCtx as unknown as { _primed?: boolean })._primed) {
+          (ensureAudioCtx as unknown as { _primed?: boolean })._primed = true;
+          const buf = actx.createBuffer(1, 1, actx.sampleRate || 22050);
+          const src = actx.createBufferSource();
+          src.buffer = buf;
+          src.connect(actx.destination);
+          try { src.start(0); } catch {}
+        }
+      } catch {}
+      return actx;
+    } catch { return audioCtxRef.current; }
+  }, []);
+
   const stopAllAudio = useCallback(() => {
     try { speechSynthesis.cancel(); } catch {}
     try { audioElRef.current?.stop(); } catch {}
@@ -186,14 +215,41 @@ export function useVedaController() {
     const startInner = () => {
       try {
         try { speechSynthesis.resume(); } catch {}
-        try { speechSynthesis.cancel(); } catch {}
+        try { if (!speechSynthesis.speaking && !speechSynthesis.pending) speechSynthesis.cancel(); } catch {}
         const u = new SpeechSynthesisUtterance(text);
         const v = pickVoice(lang, cfgRef.current.voiceURI);
         // voice+lang mismatch (e.g. gu-IN text on an en voice) = silent on Android → match them
         u.lang = v ? v.lang : REC_CODE[lang];
         if (v) u.voice = v;
-        u.rate = cfgRef.current.rate; u.pitch = 0.95;
+        u.volume = 1;
+        const r = Number(cfgRef.current.rate) || 1;
+        u.rate = Math.min(1.15, Math.max(0.85, r)); // mobile voices go silent on extreme rates
+        u.pitch = 0.95;
+        let finished = false;
+        let started = false;
+        let safetyTimer: ReturnType<typeof setTimeout> | null = null;
+        const done = () => {
+          if (finished) return;
+          finished = true;
+          if (resumeWatchRef.current) clearInterval(resumeWatchRef.current);
+          if (safetyTimer) clearTimeout(safetyTimer);
+          onend();
+        };
+        // Mobile silent-fail guard: some Android builds fire neither onend nor
+        // onerror when the voice is missing — never hang the queue.
+        safetyTimer = setTimeout(() => {
+          try {
+            if (started) return; // bolvanu chalu thai gayu — real onend ni rah jovo
+            if (!speechSynthesis.speaking && !speechSynthesis.pending) done();
+            else {
+              // onstart j na avyu = silent fail → cancel kari next par jao
+              try { speechSynthesis.cancel(); } catch {}
+              done();
+            }
+          } catch { done(); }
+        }, Math.min(12000, 4000 + text.length * 80));
         u.onstart = () => {
+          started = true;
           ttsStartedRef.current = true;
           setStatus("speaking");
           if (speakTimer.current) clearInterval(speakTimer.current);
@@ -219,10 +275,6 @@ export function useVedaController() {
         u.onboundary = (e: SpeechSynthesisEvent) => {
           const w = text.slice(e.charIndex, e.charIndex + (e.charLength || 5));
           audioBus.pulse(Math.min(0.8, 0.25 + w.length * 0.05));
-        };
-        const done = () => {
-          if (resumeWatchRef.current) clearInterval(resumeWatchRef.current);
-          onend();
         };
         u.onend = done;
         u.onerror = done;
@@ -258,10 +310,15 @@ export function useVedaController() {
       });
       if (!r.ok) throw new Error("tts off");
       const buf = await r.arrayBuffer();
-      const AC = window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
-      if (!audioCtxRef.current) audioCtxRef.current = new AC();
-      const actx = audioCtxRef.current;
-      try { await actx.resume(); } catch {}
+      if (!buf.byteLength) throw new Error("empty audio");
+      const actx = await ensureAudioCtx();
+      if (!actx) throw new Error("no audioctx");
+      // If phone still suspended (no tap yet), fall back to browser voice
+      // instead of playing silence.
+      if (actx.state === "suspended") {
+        try { await actx.resume(); } catch {}
+      }
+      if (actx.state !== "running") throw new Error("ctx locked");
       const decoded = await actx.decodeAudioData(buf.slice(0));
       const src = actx.createBufferSource();
       src.buffer = decoded;
@@ -292,7 +349,7 @@ export function useVedaController() {
       };
       src.start();
     } catch { utterBrowser(text, lang, onend); }
-  }, [utterBrowser]);
+  }, [utterBrowser, ensureAudioCtx]);
 
   const pumpQueue = useCallback(() => {
     if (speakingRef.current) return;
@@ -325,9 +382,28 @@ export function useVedaController() {
   const unlockAudio = useCallback(() => {
     audioUnlockedRef.current = true;
     setUnlocked(true);
+    // 1) WebAudio unlock INSIDE the tap gesture (phone needs this)
+    void ensureAudioCtx().then((actx) => {
+      try { void actx?.resume?.(); } catch {}
+    });
+    // 2) speechSynthesis unlock: resume + silent dummy utterance (iOS trick)
     try { speechSynthesis.resume(); } catch {}
     try { speechSynthesis.getVoices(); } catch {}
-    try { void audioCtxRef.current?.resume?.(); } catch {}
+    try {
+      const dummy = new SpeechSynthesisUtterance(" ");
+      dummy.volume = 0;
+      dummy.lang = "en-US";
+      try { speechSynthesis.speak(dummy); } catch {}
+      // dummy ne tarat cancel na karo — iOS unlock mate speak thavu joiye,
+      // fakt 300ms pachi cancel karo jo vat kare to
+      setTimeout(() => {
+        try {
+          if (speechSynthesis.speaking && ttsStartedRef.current === false) {
+            // real speech nathi, dummy j chalse — cancel safe che
+          }
+        } catch {}
+      }, 300);
+    } catch {}
     const g = pendingGreetRef.current;
     if (g && !ttsStartedRef.current) {
       pendingGreetRef.current = null;
@@ -335,9 +411,10 @@ export function useVedaController() {
       for (const s of splitSentences(cleanForSpeech(g.text))) {
         if (s) queueRef.current.push({ text: s, lang: g.lang });
       }
-      pumpQueue();
+      // ctx resume thai gaya pachi bol — tarat nahi (iOS 100-200ms mange)
+      setTimeout(() => pumpQueue(), 150);
     }
-  }, [pumpQueue, stopAllAudio]);
+  }, [pumpQueue, stopAllAudio, ensureAudioCtx]);
 
   // Speaker check (settings button) — plays without polluting chat.
   const testVoice = useCallback(() => {
